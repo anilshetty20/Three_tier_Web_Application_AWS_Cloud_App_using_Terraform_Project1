@@ -1,0 +1,27 @@
+# Node
+
+node_modules/
+npm-debug.log
+
+# Environment files (VERY IMPORTANT)
+
+.env
+
+# Terraform
+
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# Logs
+
+logs/
+*.log
+
+# OS files
+
+.DS_Store
+
+# Frontend build (optional)
+
+#frontend/build/

@@ -1,0 +1,90 @@
+name: Full CI/CD Pipeline (Secure & Dynamic)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1.Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 2.Set unique image tag (commit SHA)
+      - name: Set Image Tag
+        run: echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
+
+      # 3.Docker login
+      - name: Docker Login
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      # 4.Build backend image
+      - name: Build Backend Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/cloud-backend-terraform:${IMAGE_TAG} ./backend
+
+      # 5.Push backend image
+      - name: Push Backend Image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/cloud-backend-terraform:${IMAGE_TAG}
+
+      # 6.Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # 7.Terraform Init
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      # 8.Terraform Apply (deploy backend)
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          terraform apply -auto-approve \
+            -var="docker_image=${{ secrets.DOCKER_USERNAME }}/cloud-backend-terraform:${IMAGE_TAG}" \
+            -var="db_password=${{ secrets.DB_PASSWORD }}"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      # 9.Install frontend dependencies
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm install
+
+      # 10.Build frontend
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm run build
+
+      # 11.Upload frontend to S3
+      - name: Deploy Frontend to S3
+        uses: jakejarvis/s3-sync-action@v0.5.1
+        with:
+          args: --delete
+        env:
+          AWS_S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SOURCE_DIR: frontend/build
+
+      # 13.Invalidate CloudFront cache
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DIST_ID }} \
+            --paths "/*"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
