@@ -61,7 +61,7 @@ apt-get install -y docker.io
 systemctl start docker
 systemctl enable docker
 
-docker login -u anil1576 -p ${var.docker_password}
+
 docker pull ${var.docker_image}
 
 docker stop backend || true

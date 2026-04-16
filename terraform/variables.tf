@@ -34,8 +34,5 @@ variable "db_password" {
 variable "docker_image" {}
 
 
-variable "docker_password" {
-  sensitive = true
-}
 
 

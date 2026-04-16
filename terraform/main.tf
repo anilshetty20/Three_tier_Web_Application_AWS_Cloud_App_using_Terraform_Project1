@@ -43,7 +43,6 @@ module "asg" {
   db_endpoint = module.rds.db_host
   db_password  = var.db_password
   db_name = var.db_name
-  docker_password = var.docker_password
 }
 
 module "frontend" {
