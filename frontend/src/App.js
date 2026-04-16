@@ -25,7 +25,7 @@ function App() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Web based Cloud Applications 🚀</h1>
+      <h1>Web based Cloud Application Terraform 🚀</h1>
 
       <input
         value={name}
